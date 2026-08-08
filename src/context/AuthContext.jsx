@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 const AuthContext = createContext(null);
@@ -35,9 +35,14 @@ export function AuthProvider({ children }) {
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const logout = () => signOut(auth);
+  async function updateEmpresa(changes) {
+    if (!empresaId) return;
+    await updateDoc(doc(db, 'empresas', empresaId), changes);
+    setEmpresa((prev) => ({ ...prev, ...changes }));
+  }
 
   return (
-    <AuthContext.Provider value={{ user, empresaId, empresa, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, empresaId, empresa, loading, login, logout, updateEmpresa }}>
       {children}
     </AuthContext.Provider>
   );

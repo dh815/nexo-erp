@@ -16,8 +16,7 @@ service cloud.firestore {
     }
 
     match /empresas/{empresaId} {
-      allow read: if request.auth != null && empresaDoUsuario() == empresaId;
-      allow write: if false;
+      allow read, write: if request.auth != null && empresaDoUsuario() == empresaId;
     }
 
     match /empresas/{empresaId}/{colecao}/{docId} {

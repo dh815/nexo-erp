@@ -8,26 +8,29 @@ import { money } from '../lib/format';
 export default function Financeiro() {
   const { data: entradas, loading: l1 } = useCollection('entradas');
   const { data: saidas, loading: l2 } = useCollection('saidas');
-  const loading = l1 || l2;
+  const { data: parcelas, loading: l3 } = useCollection('parcelas');
+  const loading = l1 || l2 || l3;
 
   const stats = useMemo(() => {
     const totalEntradas = entradas.reduce((s, e) => s + (Number(e.valor) || 0), 0);
     const totalSaidas = saidas.reduce((s, e) => s + (Number(e.valor) || 0), 0);
-    return { totalEntradas, totalSaidas, saldo: totalEntradas - totalSaidas };
-  }, [entradas, saidas]);
+    const aReceber = parcelas.filter((p) => p.status !== 'pago').reduce((s, p) => s + (Number(p.valor) || 0), 0);
+    return { totalEntradas, totalSaidas, saldo: totalEntradas - totalSaidas, aReceber };
+  }, [entradas, saidas, parcelas]);
 
   if (loading) return <Loading />;
 
   return (
     <div>
       <PageHeader crumb="Financeiro" title="Visão financeira" subtitle="Entradas, saídas e saldo consolidado" />
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Icon.arrowDown} color="green" num={money(stats.totalEntradas)} label="Total de entradas" />
         <StatCard icon={Icon.arrowUp} color="red" num={money(stats.totalSaidas)} label="Total de saídas" />
         <StatCard icon={Icon.wallet} color="blue" num={money(stats.saldo)} label="Saldo" />
+        <StatCard icon={Icon.calendar} color="orange" num={money(stats.aReceber)} label="A receber (parcelas)" />
       </div>
       <div className="text-[12px] text-muted mt-4">
-        Gráfico de fluxo de caixa por período entra na próxima etapa do desenvolvimento.
+        Gráfico de fluxo de caixa por período entra numa próxima etapa.
       </div>
     </div>
   );

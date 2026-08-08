@@ -17,10 +17,31 @@ import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, empresaId, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-faint text-sm">Carregando...</div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (!empresaId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center">
+        <div className="max-w-sm">
+          <div className="font-bold text-[15px] mb-1.5">Conta sem empresa vinculada</div>
+          <div className="text-[13px] text-muted">
+            Este usuário ({user.email}) não tem um documento em <code>usuarios/{'{uid}'}</code> com o campo
+            <code> empresaId</code> no Firestore. Crie esse documento (ou vincule ao <code>empresa_principal</code>
+            já existente) para acessar o sistema.
+          </div>
+        </div>
+      </div>
+    );
+  }
   return children;
+}
+
+function LoginRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-faint text-sm">Carregando...</div>;
+  if (user) return <Navigate to="/" replace />;
+  return <Login />;
 }
 
 export default function App() {
@@ -28,7 +49,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginRoute />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="entradas" element={<Entradas />} />

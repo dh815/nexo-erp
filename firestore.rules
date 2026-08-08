@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Modelo multi-empresa: cada usuário só acessa os dados da própria empresa.
+// O documento usuarios/{uid} guarda o campo "empresaId" que indica a qual
+// empresa aquele usuário pertence.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function empresaDoUsuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.empresaId;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // criação/edição feita apenas via backend/admin
+    }
+
+    match /empresas/{empresaId} {
+      allow read: if request.auth != null && empresaDoUsuario() == empresaId;
+      allow write: if false;
+    }
+
+    match /empresas/{empresaId}/{colecao}/{docId} {
+      allow read, write: if request.auth != null && empresaDoUsuario() == empresaId;
+    }
+  }
+}

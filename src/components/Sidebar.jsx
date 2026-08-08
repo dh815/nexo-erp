@@ -1,0 +1,75 @@
+import { NavLink } from 'react-router-dom';
+import { Icon } from './Icons';
+
+const groups = [
+  { label: 'Visão geral', items: [
+    { to: '/', label: 'Dashboard', icon: Icon.grid, end: true },
+  ]},
+  { label: 'Financeiro', items: [
+    { to: '/entradas', label: 'Entradas', icon: Icon.arrowDown },
+    { to: '/saidas', label: 'Saídas', icon: Icon.arrowUp },
+    { to: '/financeiro', label: 'Financeiro', icon: Icon.wallet },
+    { to: '/calendario', label: 'Calendário', icon: Icon.calendar },
+  ]},
+  { label: 'Vendas', items: [
+    { to: '/pedidos', label: 'Pedidos de Venda', icon: Icon.cart },
+    { to: '/calculadora', label: 'Calculadora', icon: Icon.calc },
+    { to: '/clientes', label: 'Clientes', icon: Icon.users },
+  ]},
+  { label: 'Catálogo', items: [
+    { to: '/produtos', label: 'Produtos', icon: Icon.box },
+    { to: '/categorias', label: 'Categorias', icon: Icon.tag },
+    { to: '/estoque', label: 'Estoque', icon: Icon.layers },
+  ]},
+  { label: 'Sistema', items: [
+    { to: '/relatorios', label: 'Relatórios', icon: Icon.chart },
+    { to: '/configuracoes', label: 'Configurações', icon: Icon.settings },
+  ]},
+];
+
+export function Sidebar({ open, onNavigate }) {
+  return (
+    <aside className={`w-[242px] shrink-0 bg-white border-r border-line flex flex-col fixed top-0 bottom-0 left-0 z-40 transition-transform
+      ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      <div className="flex items-center gap-2.5 px-5 pt-[22px] pb-[18px]">
+        <div className="w-[34px] h-[34px] rounded-[10px] bg-gradient-to-br from-[#6f8dff] to-primary flex items-center justify-center text-white font-extrabold text-[15px] shrink-0 font-display">N</div>
+        <div>
+          <div className="font-extrabold text-[17px] tracking-tight font-display leading-none">Nexo</div>
+          <div className="text-[10.5px] text-faint font-bold tracking-wider uppercase mt-0.5">ERP</div>
+        </div>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 pb-3">
+        {groups.map((g) => (
+          <div key={g.label}>
+            <div className="text-[10.5px] font-bold text-faint uppercase tracking-wider px-2.5 pt-4 pb-1.5">{g.label}</div>
+            {g.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  `flex items-center gap-[11px] px-3 py-2 rounded-[10px] text-[13.5px] font-semibold mb-0.5 ${
+                    isActive ? 'bg-primary-light text-primary-dark' : 'text-muted hover:bg-bg-soft hover:text-ink'
+                  }`
+                }
+              >
+                <item.icon className="w-[18px] h-[18px] shrink-0" />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="px-5 py-5 border-t border-line">
+        <div className="bg-bg-soft rounded-xl p-3">
+          <div className="text-xs font-bold text-primary-dark">Plano Profissional</div>
+          <div className="text-[11px] text-muted mt-0.5">620 de 1.000 pedidos/mês</div>
+          <div className="h-[5px] bg-[#dfe6f7] rounded-full mt-2 overflow-hidden">
+            <div className="h-full w-[62%] bg-primary" />
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}

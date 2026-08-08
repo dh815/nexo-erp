@@ -10,7 +10,7 @@ import { createCompra, deleteCompra } from '../lib/compras';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 
-const emptyForm = { fornecedor: '', data: new Date().toISOString().slice(0, 10), formaPagamento: 'Boleto', observacoes: '' };
+const emptyForm = { fornecedor: '', data: new Date().toISOString().slice(0, 10), formaPagamento: 'Boleto', numeroParcelas: 0, diasVencimentoBoleto: 30, observacoes: '' };
 
 export default function Compras() {
   const { empresaId } = useAuth();
@@ -52,6 +52,8 @@ export default function Compras() {
   }
 
   const total = cart.reduce((s, i) => s + i.quantidade * i.custoUnitario, 0);
+  const geraParcelas = form.formaPagamento === 'Boleto' || (form.formaPagamento === 'Cartão' && Number(form.numeroParcelas) > 0);
+  const parcelasEfetivas = form.formaPagamento === 'Boleto' ? Math.max(Number(form.numeroParcelas), 1) : Number(form.numeroParcelas);
 
   const filteredProdutos = produtos.filter((p) =>
     p.nome.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase())
@@ -83,7 +85,7 @@ export default function Compras() {
     { key: 'data', header: 'Data', render: (r) => <span className="text-muted">{r.data ? new Date(r.data).toLocaleDateString('pt-BR') : '—'}</span> },
     { key: 'itens', header: 'Itens', render: (r) => <span className="text-muted">{r.itens?.length || 0} itens</span> },
     { key: 'valorTotal', header: 'Valor total', render: (r) => <b>{money(r.valorTotal)}</b> },
-    { key: 'formaPagamento', header: 'Pagamento', render: (r) => <span className="text-muted">{r.formaPagamento}</span> },
+    { key: 'formaPagamento', header: 'Pagamento', render: (r) => <span className="text-muted">{r.formaPagamento} {r.numeroParcelas > 0 ? `· ${r.numeroParcelas}x` : ''}</span> },
   ];
 
   return (
@@ -165,10 +167,29 @@ export default function Compras() {
               </select>
             </Field>
           </div>
+          <Field label="Parcelas">
+            <select className={inputClass} value={form.numeroParcelas} onChange={(e) => set('numeroParcelas', Number(e.target.value))}>
+              <option value={0}>{form.formaPagamento === 'Boleto' ? '1 boleto único' : '0x — à vista'}</option>
+              {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}x</option>)}
+            </select>
+          </Field>
+          {form.formaPagamento === 'Boleto' && (
+            <Field label="Vencimento do 1º boleto (dias após a data da compra)">
+              <input type="number" min="1" className={inputClass} value={form.diasVencimentoBoleto} onChange={(e) => set('diasVencimentoBoleto', e.target.value)} />
+            </Field>
+          )}
+          <div className="text-[11.5px] text-muted -mt-1.5 mb-3">
+            {geraParcelas
+              ? form.formaPagamento === 'Boleto'
+                ? `Vai gerar ${parcelasEfetivas} boleto(s) — o 1º vence em ${form.diasVencimentoBoleto} dias, os seguintes a cada 30 dias.`
+                : `Vai gerar ${form.numeroParcelas} conta(s) a pagar no Calendário (1 por mês).`
+              : 'Saída lançada à vista, não gera conta a pagar no calendário.'}
+          </div>
           <Field label="Observações"><textarea className={inputClass} rows={2} value={form.observacoes} onChange={(e) => set('observacoes', e.target.value)} /></Field>
 
           <div className="flex justify-between text-base font-extrabold pt-2 mt-1 border-t border-line">
-            <span>Total da compra</span><span>{money(total)}</span>
+            <span>Total {geraParcelas ? `(${parcelasEfetivas}x de ${money(total / parcelasEfetivas)})` : '(à vista)'}</span>
+            <span>{money(total)}</span>
           </div>
         </Modal>
       )}

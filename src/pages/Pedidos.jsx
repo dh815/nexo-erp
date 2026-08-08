@@ -14,7 +14,7 @@ const statusColor = { pago: 'green', parcial: 'blue', pendente: 'orange', atrasa
 
 const emptyForm = {
   clienteId: '', clienteNome: '', data: new Date().toISOString().slice(0, 10),
-  desconto: 0, frete: 0, formaPagamento: 'Pix', numeroParcelas: 0,
+  desconto: 0, frete: 0, formaPagamento: 'Pix', numeroParcelas: 0, diasVencimentoBoleto: 30,
   status: 'pendente', observacoes: '',
 };
 
@@ -40,7 +40,7 @@ export default function Pedidos() {
     return { subtotal, descontoVal, total };
   }, [cart, form.desconto, form.frete]);
 
-  const geraParcelas = Number(form.numeroParcelas) > 0 && ['Cartão', 'Boleto'].includes(form.formaPagamento);
+  const geraParcelas = form.formaPagamento === 'Boleto' || (form.formaPagamento === 'Cartão' && Number(form.numeroParcelas) > 0);
 
   async function handleCreate() {
     if (!form.clienteNome || cart.length === 0) {
@@ -120,15 +120,22 @@ export default function Pedidos() {
             </Field>
             <Field label="Parcelas">
               <select className={inputClass} value={form.numeroParcelas} onChange={(e) => set('numeroParcelas', Number(e.target.value))}>
-                <option value={0}>0x — à vista</option>
+                <option value={0}>{form.formaPagamento === 'Boleto' ? '1 boleto único' : '0x — à vista'}</option>
                 {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}x</option>)}
               </select>
             </Field>
           </div>
+          {form.formaPagamento === 'Boleto' && (
+            <Field label="Vencimento do 1º boleto (dias após a data do pedido)">
+              <input type="number" min="1" className={inputClass} value={form.diasVencimentoBoleto} onChange={(e) => set('diasVencimentoBoleto', e.target.value)} />
+            </Field>
+          )}
           <div className="text-[11.5px] text-muted -mt-1.5 mb-3">
             {geraParcelas
-              ? `Vai gerar ${form.numeroParcelas} parcela(s) no Calendário financeiro.`
-              : 'Não gera parcela no calendário (recebido à vista) — só Cartão ou Boleto parcelado geram.'}
+              ? form.formaPagamento === 'Boleto'
+                ? `Vai gerar ${Math.max(Number(form.numeroParcelas), 1)} boleto(s) no Calendário — o 1º vence em ${form.diasVencimentoBoleto} dias, os seguintes a cada 30 dias.`
+                : `Vai gerar ${form.numeroParcelas} parcela(s) no Calendário financeiro (1 por mês).`
+              : 'Recebido à vista, não gera parcela no calendário.'}
           </div>
           <Field label="Data"><input type="date" className={inputClass} value={form.data} onChange={(e) => set('data', e.target.value)} /></Field>
           <Field label="Observações"><textarea className={inputClass} rows={2} value={form.observacoes} onChange={(e) => set('observacoes', e.target.value)} /></Field>
@@ -138,7 +145,7 @@ export default function Pedidos() {
             <div className="flex justify-between text-[13px] text-muted py-1"><span>Desconto</span><span>- {money(totals.descontoVal)}</span></div>
             <div className="flex justify-between text-[13px] text-muted py-1"><span>Frete</span><span>+ {money(Number(form.frete) || 0)}</span></div>
             <div className="flex justify-between text-base font-extrabold pt-2 mt-1 border-t border-line">
-              <span>Total {form.numeroParcelas > 0 ? `(${form.numeroParcelas}x de ${money(totals.total / form.numeroParcelas)})` : '(à vista)'}</span>
+              <span>Total {geraParcelas ? `(${Math.max(Number(form.numeroParcelas), 1)}x de ${money(totals.total / Math.max(Number(form.numeroParcelas), 1))})` : '(à vista)'}</span>
               <span>{money(totals.total)}</span>
             </div>
           </div>

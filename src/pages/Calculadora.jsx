@@ -8,6 +8,7 @@ import { ProductPicker } from '../components/ProductPicker';
 import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createPedido } from '../lib/pedidos';
+import { calcularVencimentos } from '../lib/vencimentos';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 
@@ -23,9 +24,11 @@ export default function Calculadora() {
   const [frete, setFrete] = useState(0);
   const [parcelas, setParcelas] = useState(0);
   const [formaPagamento, setFormaPagamento] = useState('Pix');
+  const [diasVencimentoBoleto, setDiasVencimentoBoleto] = useState(30);
   const [saving, setSaving] = useState(false);
 
-  const geraParcelas = Number(parcelas) > 0 && ['Cartão', 'Boleto'].includes(formaPagamento);
+  const parcelasEfetivas = formaPagamento === 'Boleto' ? Math.max(Number(parcelas), 1) : Number(parcelas);
+  const geraParcelas = formaPagamento === 'Boleto' || (formaPagamento === 'Cartão' && Number(parcelas) > 0);
 
   const totals = useMemo(() => {
     const subtotal = cart.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
@@ -34,14 +37,15 @@ export default function Calculadora() {
     return { subtotal, descontoVal, total };
   }, [cart, desconto, frete]);
 
-  const datasParcelas = useMemo(() => {
-    if (totals.total <= 0 || !geraParcelas) return null;
-    const base = new Date();
-    const first = new Date(base); first.setMonth(first.getMonth() + 1);
-    const last = new Date(base); last.setMonth(last.getMonth() + Number(parcelas));
-    const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    return `${fmt(first)} até ${fmt(last)}`;
-  }, [totals.total, parcelas, geraParcelas]);
+  const vencimentos = useMemo(() => {
+    if (totals.total <= 0 || !geraParcelas) return [];
+    return calcularVencimentos({ formaPagamento, numeroParcelas: parcelasEfetivas, diasVencimentoBoleto, dataBase: new Date() });
+  }, [totals.total, geraParcelas, formaPagamento, parcelasEfetivas, diasVencimentoBoleto]);
+
+  const fmtCurto = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const datasParcelas = vencimentos.length
+    ? (vencimentos.length === 1 ? fmtCurto(vencimentos[0]) : `${fmtCurto(vencimentos[0])} até ${fmtCurto(vencimentos[vencimentos.length - 1])}`)
+    : null;
 
   async function handleGerarPedido() {
     const cliente = clientes.find((c) => c.id === clienteId);
@@ -59,6 +63,7 @@ export default function Calculadora() {
         valorTotal: totals.total,
         formaPagamento,
         numeroParcelas: Number(parcelas),
+        diasVencimentoBoleto,
         status: 'pendente',
         observacoes: '',
       });
@@ -121,20 +126,25 @@ export default function Calculadora() {
           </Field>
           <Field label="Parcelas">
             <select className={inputClass} value={parcelas} onChange={(e) => setParcelas(e.target.value)}>
-              <option value={0}>0x — à vista</option>
+              <option value={0}>{formaPagamento === 'Boleto' ? '1 boleto único' : '0x — à vista'}</option>
               {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}x</option>)}
             </select>
           </Field>
+          {formaPagamento === 'Boleto' && (
+            <Field label="Vencimento do 1º boleto (dias)">
+              <input type="number" min="1" className={inputClass} value={diasVencimentoBoleto} onChange={(e) => setDiasVencimentoBoleto(e.target.value)} />
+            </Field>
+          )}
           <div className="text-[11.5px] text-muted -mt-1.5">
             {geraParcelas
-              ? 'Vai gerar parcelas no Calendário financeiro.'
-              : 'Não gera parcela no calendário (recebido à vista) — só Cartão ou Boleto parcelado geram.'}
+              ? 'Vai gerar conta(s) no Calendário financeiro.'
+              : 'Recebido à vista, não gera parcela no calendário.'}
           </div>
 
           {geraParcelas ? (
             <div className="bg-primary-light rounded-xl p-3.5 mt-2">
               <div className="text-[11.5px] font-bold text-primary-dark">Valor de cada parcela</div>
-              <div className="text-lg font-extrabold text-primary-dark mt-0.5">{money(totals.total / Number(parcelas) || 0)}</div>
+              <div className="text-lg font-extrabold text-primary-dark mt-0.5">{money(totals.total / parcelasEfetivas || 0)}</div>
               <div className="text-[11.5px] font-bold text-primary-dark mt-2">Vencimentos: {datasParcelas || '—'}</div>
             </div>
           ) : (

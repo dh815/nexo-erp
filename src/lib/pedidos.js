@@ -2,22 +2,29 @@ import {
   collection, doc, writeBatch, serverTimestamp, getDocs, query, where, increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { calcularVencimentos } from './vencimentos';
 
 function path(empresaId, name) {
   return `empresas/${empresaId}/${name}`;
 }
 
 // Cria um pedido de venda: grava o pedido, dá baixa automática no estoque
-// de cada produto vendido e, se o pagamento for Cartão ou Boleto parcelado,
-// gera as parcelas que alimentam o Calendário financeiro.
+// de cada produto vendido e, se o pagamento não for instantâneo, gera as
+// parcelas que alimentam o Calendário financeiro.
 //
 // Pix, Dinheiro e Transferência são considerados recebidos na hora — não
-// geram parcela nenhuma, e o pedido já entra como "pago". O mesmo vale
-// para "0 parcelas" (venda à vista), independente da forma de pagamento.
+// geram parcela nenhuma, e o pedido já entra como "pago".
+// Boleto NUNCA é instantâneo (mesmo "à vista" ele tem prazo de compensação),
+// então sempre gera ao menos 1 vencimento, contado em dias corridos a partir
+// da data do pedido (padrão configurável). Cartão só gera parcela/calendário
+// quando o número de parcelas é maior que 0; cartão à vista é tratado como
+// recebido na hora.
 export async function createPedido(empresaId, pedido) {
   const batch = writeBatch(db);
-  const numParcelas = Number(pedido.numeroParcelas) || 0;
-  const geraParcelas = numParcelas > 0 && ['Cartão', 'Boleto'].includes(pedido.formaPagamento);
+  const formaPagamento = pedido.formaPagamento;
+  const numParcelasInformado = Number(pedido.numeroParcelas) || 0;
+  const numParcelas = formaPagamento === 'Boleto' ? Math.max(numParcelasInformado, 1) : numParcelasInformado;
+  const geraParcelas = formaPagamento === 'Boleto' || (formaPagamento === 'Cartão' && numParcelas > 0);
 
   const pedidoRef = doc(collection(db, path(empresaId, 'pedidos')));
   batch.set(pedidoRef, {
@@ -34,9 +41,10 @@ export async function createPedido(empresaId, pedido) {
     batch.update(produtoRef, { estoque: increment(-item.quantidade) });
   }
 
-  // Se recebido à vista, gera a Entrada financeira na hora (o dinheiro já entrou).
-  // Se parcelado (Cartão/Boleto), a Entrada de cada parcela é gerada quando ela
-  // é marcada como recebida no Calendário financeiro — ver receberParcela().
+  // Se recebido à vista (Pix/Dinheiro/Transferência ou Cartão sem parcela),
+  // gera a Entrada financeira na hora. Se Boleto ou Cartão parcelado, a
+  // Entrada de cada parcela só é gerada quando ela é marcada como recebida
+  // no Calendário financeiro — ver receberParcela().
   if (!geraParcelas) {
     const entradaRef = doc(collection(db, path(empresaId, 'entradas')));
     batch.set(entradaRef, {
@@ -51,26 +59,29 @@ export async function createPedido(empresaId, pedido) {
     });
   }
 
-  // Geração das parcelas (Calendário financeiro) — só Cartão/Boleto parcelado
+  // Geração das parcelas/vencimentos (Calendário financeiro)
   if (geraParcelas) {
     const valorParcela = pedido.valorTotal / numParcelas;
-    const dataBase = pedido.data ? new Date(pedido.data) : new Date();
+    const vencimentos = calcularVencimentos({
+      formaPagamento,
+      numeroParcelas: numParcelas,
+      diasVencimentoBoleto: pedido.diasVencimentoBoleto,
+      dataBase: pedido.data,
+    });
 
-    for (let i = 1; i <= numParcelas; i++) {
-      const vencimento = new Date(dataBase);
-      vencimento.setMonth(vencimento.getMonth() + i);
+    vencimentos.forEach((vencimento, idx) => {
       const parcelaRef = doc(collection(db, path(empresaId, 'parcelas')));
       batch.set(parcelaRef, {
         pedidoId: pedidoRef.id,
         clienteNome: pedido.clienteNome,
-        numero: i,
+        numero: idx + 1,
         totalParcelas: numParcelas,
         valor: valorParcela,
-        vencimento: vencimento.toISOString().slice(0, 10),
+        vencimento,
         status: 'pendente',
         criadoEm: serverTimestamp(),
       });
-    }
+    });
   }
 
   await batch.commit();

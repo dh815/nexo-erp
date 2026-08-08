@@ -21,6 +21,9 @@ const groups = [
     { to: '/categorias', label: 'Categorias', icon: Icon.tag },
     { to: '/estoque', label: 'Estoque', icon: Icon.layers },
   ]},
+  { label: 'Compras', items: [
+    { to: '/compras', label: 'Compras', icon: Icon.bag },
+  ]},
   { label: 'Sistema', items: [
     { to: '/relatorios', label: 'Relatórios', icon: Icon.chart },
     { to: '/configuracoes', label: 'Configurações', icon: Icon.settings },

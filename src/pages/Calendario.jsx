@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { useCollection } from '../hooks/useCollection';
+import { useAuth } from '../context/AuthContext';
 import { Card, Loading, Button } from '../components/ui';
 import { money } from '../lib/format';
+import { receberParcela } from '../lib/pedidos';
 
 const dow = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function toDateKey(d) { return d.toISOString().slice(0, 10); }
 
 export default function Calendario() {
-  const { data: parcelas, loading, update } = useCollection('parcelas', { orderByField: 'vencimento', direction: 'asc' });
+  const { empresaId } = useAuth();
+  const { data: parcelas, loading } = useCollection('parcelas', { orderByField: 'vencimento', direction: 'asc' });
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -42,7 +45,7 @@ export default function Calendario() {
     : 'Hoje';
 
   async function receber(p) {
-    await update(p.id, { status: 'pago' });
+    await receberParcela(empresaId, p);
   }
 
   if (loading) return <Loading />;

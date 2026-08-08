@@ -34,6 +34,23 @@ export async function createPedido(empresaId, pedido) {
     batch.update(produtoRef, { estoque: increment(-item.quantidade) });
   }
 
+  // Se recebido à vista, gera a Entrada financeira na hora (o dinheiro já entrou).
+  // Se parcelado (Cartão/Boleto), a Entrada de cada parcela é gerada quando ela
+  // é marcada como recebida no Calendário financeiro — ver receberParcela().
+  if (!geraParcelas) {
+    const entradaRef = doc(collection(db, path(empresaId, 'entradas')));
+    batch.set(entradaRef, {
+      descricao: `Venda — pedido ${pedidoRef.id.slice(0, 6)} (${pedido.clienteNome})`,
+      categoria: 'Vendas',
+      valor: pedido.valorTotal,
+      data: pedido.data || new Date().toISOString().slice(0, 10),
+      formaPagamento: pedido.formaPagamento,
+      pedidoId: pedidoRef.id,
+      criadoEm: serverTimestamp(),
+      atualizadoEm: serverTimestamp(),
+    });
+  }
+
   // Geração das parcelas (Calendário financeiro) — só Cartão/Boleto parcelado
   if (geraParcelas) {
     const valorParcela = pedido.valorTotal / numParcelas;
@@ -76,6 +93,28 @@ export async function deletePedido(empresaId, pedido) {
     query(collection(db, path(empresaId, 'parcelas')), where('pedidoId', '==', pedido.id))
   );
   parcelasSnap.forEach((d) => batch.delete(d.ref));
+
+  await batch.commit();
+}
+
+// Marca uma parcela como recebida e gera a Entrada financeira correspondente.
+export async function receberParcela(empresaId, parcela) {
+  const batch = writeBatch(db);
+
+  const parcelaRef = doc(db, path(empresaId, 'parcelas'), parcela.id);
+  batch.update(parcelaRef, { status: 'pago' });
+
+  const entradaRef = doc(collection(db, path(empresaId, 'entradas')));
+  batch.set(entradaRef, {
+    descricao: `Parcela ${parcela.numero}/${parcela.totalParcelas} — ${parcela.clienteNome}`,
+    categoria: 'Parcelamento',
+    valor: parcela.valor,
+    data: new Date().toISOString().slice(0, 10),
+    formaPagamento: '',
+    pedidoId: parcela.pedidoId,
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
 
   await batch.commit();
 }

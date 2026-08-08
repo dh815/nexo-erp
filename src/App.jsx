@@ -45,6 +45,22 @@ function LoginRoute() {
   return <Login />;
 }
 
+// Envolve uma rota que só deve existir para empresas com determinada feature
+// flag ligada (empresas/{id}.features.chaveDoRecurso === true). Uso:
+// <Route path="recurso-exclusivo" element={<FeatureRoute feature="chaveDoRecurso"><PaginaX /></FeatureRoute>} />
+function FeatureRoute({ feature, children }) {
+  const { hasFeature } = useAuth();
+  if (!hasFeature(feature)) {
+    return (
+      <div className="p-8 text-center">
+        <div className="font-bold text-[14.5px] mb-1">Recurso não disponível</div>
+        <div className="text-[13px] text-muted">Este módulo não está ativado para a sua empresa.</div>
+      </div>
+    );
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>

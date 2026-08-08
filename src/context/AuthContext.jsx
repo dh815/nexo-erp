@@ -41,8 +41,18 @@ export function AuthProvider({ children }) {
     setEmpresa((prev) => ({ ...prev, ...changes }));
   }
 
+  // Recursos exclusivos por empresa (feature flags). Fica salvo em
+  // empresas/{empresaId}.features = { chaveDoRecurso: true }. Ativar/desativar
+  // é feito direto no Firestore (não tem tela pra isso — é controle do dono
+  // do SaaS, não do cliente). Ver README para o passo a passo de como
+  // adicionar um recurso novo.
+  const features = empresa?.features || {};
+  function hasFeature(key) {
+    return !!features[key];
+  }
+
   return (
-    <AuthContext.Provider value={{ user, empresaId, empresa, loading, login, logout, updateEmpresa }}>
+    <AuthContext.Provider value={{ user, empresaId, empresa, loading, login, logout, updateEmpresa, features, hasFeature }}>
       {children}
     </AuthContext.Provider>
   );

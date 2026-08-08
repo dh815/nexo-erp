@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Icon } from './Icons';
+import { useAuth } from '../context/AuthContext';
 
 const groups = [
   { label: 'Visão geral', items: [
@@ -31,6 +32,13 @@ const groups = [
 ];
 
 export function Sidebar({ open, onNavigate }) {
+  const { hasFeature } = useAuth();
+  // Item com "feature" só aparece se empresas/{id}.features[chave] === true.
+  // Item sem "feature" aparece pra todo mundo, como sempre.
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((item) => !item.feature || hasFeature(item.feature)) }))
+    .filter((g) => g.items.length > 0);
+
   return (
     <aside className={`w-[242px] shrink-0 bg-white border-r border-line flex flex-col fixed top-0 bottom-0 left-0 z-40 transition-transform
       ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
@@ -42,7 +50,7 @@ export function Sidebar({ open, onNavigate }) {
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-3">
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <div key={g.label}>
             <div className="text-[10.5px] font-bold text-faint uppercase tracking-wider px-2.5 pt-4 pb-1.5">{g.label}</div>
             {g.items.map((item) => (

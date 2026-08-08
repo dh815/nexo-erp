@@ -112,3 +112,41 @@ fintrack-server.
 3. Calendário financeiro (parcelas geradas a partir dos Pedidos)
 4. Relatórios (exportação PDF/Excel/CSV)
 5. Configurações (cadastro de empresa via tela, ao invés de manual)
+
+## Recursos exclusivos por cliente (feature flags)
+
+Quando um cliente pedir algo específico (uma aba nova, um comportamento
+diferente), dá pra criar isso no código e deixar ativado **só na conta
+dele**, sem afetar os outros clientes e sem precisar de deploy separado.
+
+Como funciona: cada empresa tem um campo `features` no Firestore
+(`empresas/{empresaId}.features`), tipo:
+```
+features: { relatorioPersonalizadoX: true }
+```
+Isso é controlado direto no Firestore Console — não tem tela pra isso
+dentro do sistema, porque é uma decisão do dono do SaaS (você), não do
+cliente.
+
+### Passo a passo pra adicionar um recurso novo
+
+1. Cria a página normalmente em `src/pages/NomeDoRecurso.jsx`.
+2. No `src/App.jsx`, importa a página e adiciona a rota envolvida no
+   `FeatureRoute`:
+   ```jsx
+   <Route path="nome-do-recurso" element={
+     <FeatureRoute feature="chaveDoRecurso"><NomeDoRecurso /></FeatureRoute>
+   } />
+   ```
+3. No `src/components/Sidebar.jsx`, adiciona o item do menu com a mesma
+   chave — ele só aparece pra quem tiver a flag ligada:
+   ```js
+   { to: '/nome-do-recurso', label: 'Nome do Recurso', icon: Icon.box, feature: 'chaveDoRecurso' }
+   ```
+4. No Firestore, no documento da empresa daquele cliente específico,
+   adiciona o campo `features.chaveDoRecurso: true`.
+
+Pronto — só aquela empresa vê a aba e consegue acessar a rota (mesmo
+tentando digitar a URL direto, o `FeatureRoute` bloqueia). Se um dia
+quiser liberar pra todo mundo, é só tirar a checagem de feature, ou
+ativar a flag pra todas as empresas.

@@ -14,7 +14,7 @@ const statusColor = { pago: 'green', parcial: 'blue', pendente: 'orange', atrasa
 
 const emptyForm = {
   clienteId: '', clienteNome: '', data: new Date().toISOString().slice(0, 10),
-  desconto: 0, frete: 0, formaPagamento: 'Pix', numeroParcelas: 1,
+  desconto: 0, frete: 0, formaPagamento: 'Pix', numeroParcelas: 0,
   status: 'pendente', observacoes: '',
 };
 
@@ -39,6 +39,8 @@ export default function Pedidos() {
     const total = Math.max(subtotal - descontoVal + (Number(form.frete) || 0), 0);
     return { subtotal, descontoVal, total };
   }, [cart, form.desconto, form.frete]);
+
+  const geraParcelas = Number(form.numeroParcelas) > 0 && ['Cartão', 'Boleto'].includes(form.formaPagamento);
 
   async function handleCreate() {
     if (!form.clienteNome || cart.length === 0) {
@@ -74,7 +76,7 @@ export default function Pedidos() {
     { key: 'data', header: 'Data', render: (r) => <span className="text-muted">{r.data ? new Date(r.data).toLocaleDateString('pt-BR') : '—'}</span> },
     { key: 'itens', header: 'Itens', render: (r) => <span className="text-muted">{r.itens?.length || 0} itens</span> },
     { key: 'valorTotal', header: 'Valor total', render: (r) => <b>{money(r.valorTotal)}</b> },
-    { key: 'pagamento', header: 'Pagamento', render: (r) => <span className="text-muted">{r.formaPagamento} · {r.numeroParcelas}x</span> },
+    { key: 'pagamento', header: 'Pagamento', render: (r) => <span className="text-muted">{r.formaPagamento} · {r.numeroParcelas > 0 ? `${r.numeroParcelas}x` : 'à vista'}</span> },
     { key: 'status', header: 'Status', render: (r) => <Pill color={statusColor[r.status] || 'gray'}>{r.status}</Pill> },
   ];
 
@@ -118,9 +120,15 @@ export default function Pedidos() {
             </Field>
             <Field label="Parcelas">
               <select className={inputClass} value={form.numeroParcelas} onChange={(e) => set('numeroParcelas', Number(e.target.value))}>
+                <option value={0}>0x — à vista</option>
                 {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}x</option>)}
               </select>
             </Field>
+          </div>
+          <div className="text-[11.5px] text-muted -mt-1.5 mb-3">
+            {geraParcelas
+              ? `Vai gerar ${form.numeroParcelas} parcela(s) no Calendário financeiro.`
+              : 'Não gera parcela no calendário (recebido à vista) — só Cartão ou Boleto parcelado geram.'}
           </div>
           <Field label="Data"><input type="date" className={inputClass} value={form.data} onChange={(e) => set('data', e.target.value)} /></Field>
           <Field label="Observações"><textarea className={inputClass} rows={2} value={form.observacoes} onChange={(e) => set('observacoes', e.target.value)} /></Field>
@@ -130,7 +138,7 @@ export default function Pedidos() {
             <div className="flex justify-between text-[13px] text-muted py-1"><span>Desconto</span><span>- {money(totals.descontoVal)}</span></div>
             <div className="flex justify-between text-[13px] text-muted py-1"><span>Frete</span><span>+ {money(Number(form.frete) || 0)}</span></div>
             <div className="flex justify-between text-base font-extrabold pt-2 mt-1 border-t border-line">
-              <span>Total ({form.numeroParcelas}x de {money(totals.total / form.numeroParcelas)})</span>
+              <span>Total {form.numeroParcelas > 0 ? `(${form.numeroParcelas}x de ${money(totals.total / form.numeroParcelas)})` : '(à vista)'}</span>
               <span>{money(totals.total)}</span>
             </div>
           </div>
@@ -156,7 +164,7 @@ export default function Pedidos() {
             ))}
           </div>
           <div className="flex justify-between text-base font-extrabold pt-2 border-t border-line">
-            <span>Total ({modal.numeroParcelas}x)</span><span>{money(modal.valorTotal)}</span>
+            <span>Total {modal.numeroParcelas > 0 ? `(${modal.numeroParcelas}x)` : '(à vista)'}</span><span>{money(modal.valorTotal)}</span>
           </div>
           {modal.observacoes && <div className="text-[12.5px] text-muted mt-3">{modal.observacoes}</div>}
         </Modal>

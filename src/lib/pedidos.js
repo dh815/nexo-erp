@@ -8,14 +8,22 @@ function path(empresaId, name) {
 }
 
 // Cria um pedido de venda: grava o pedido, dá baixa automática no estoque
-// de cada produto vendido e, se parcelado, gera as parcelas que alimentam
-// o Calendário financeiro.
+// de cada produto vendido e, se o pagamento for Cartão ou Boleto parcelado,
+// gera as parcelas que alimentam o Calendário financeiro.
+//
+// Pix, Dinheiro e Transferência são considerados recebidos na hora — não
+// geram parcela nenhuma, e o pedido já entra como "pago". O mesmo vale
+// para "0 parcelas" (venda à vista), independente da forma de pagamento.
 export async function createPedido(empresaId, pedido) {
   const batch = writeBatch(db);
+  const numParcelas = Number(pedido.numeroParcelas) || 0;
+  const geraParcelas = numParcelas > 0 && ['Cartão', 'Boleto'].includes(pedido.formaPagamento);
 
   const pedidoRef = doc(collection(db, path(empresaId, 'pedidos')));
   batch.set(pedidoRef, {
     ...pedido,
+    numeroParcelas: numParcelas,
+    status: geraParcelas ? (pedido.status || 'pendente') : 'pago',
     criadoEm: serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });
@@ -26,25 +34,26 @@ export async function createPedido(empresaId, pedido) {
     batch.update(produtoRef, { estoque: increment(-item.quantidade) });
   }
 
-  // Geração das parcelas (Calendário financeiro)
-  const numParcelas = Number(pedido.numeroParcelas) || 1;
-  const valorParcela = pedido.valorTotal / numParcelas;
-  const dataBase = pedido.data ? new Date(pedido.data) : new Date();
+  // Geração das parcelas (Calendário financeiro) — só Cartão/Boleto parcelado
+  if (geraParcelas) {
+    const valorParcela = pedido.valorTotal / numParcelas;
+    const dataBase = pedido.data ? new Date(pedido.data) : new Date();
 
-  for (let i = 1; i <= numParcelas; i++) {
-    const vencimento = new Date(dataBase);
-    vencimento.setMonth(vencimento.getMonth() + i);
-    const parcelaRef = doc(collection(db, path(empresaId, 'parcelas')));
-    batch.set(parcelaRef, {
-      pedidoId: pedidoRef.id,
-      clienteNome: pedido.clienteNome,
-      numero: i,
-      totalParcelas: numParcelas,
-      valor: valorParcela,
-      vencimento: vencimento.toISOString().slice(0, 10),
-      status: 'pendente',
-      criadoEm: serverTimestamp(),
-    });
+    for (let i = 1; i <= numParcelas; i++) {
+      const vencimento = new Date(dataBase);
+      vencimento.setMonth(vencimento.getMonth() + i);
+      const parcelaRef = doc(collection(db, path(empresaId, 'parcelas')));
+      batch.set(parcelaRef, {
+        pedidoId: pedidoRef.id,
+        clienteNome: pedido.clienteNome,
+        numero: i,
+        totalParcelas: numParcelas,
+        valor: valorParcela,
+        vencimento: vencimento.toISOString().slice(0, 10),
+        status: 'pendente',
+        criadoEm: serverTimestamp(),
+      });
+    }
   }
 
   await batch.commit();

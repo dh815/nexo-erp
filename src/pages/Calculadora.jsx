@@ -21,9 +21,11 @@ export default function Calculadora() {
   const [clienteId, setClienteId] = useState('');
   const [desconto, setDesconto] = useState(0);
   const [frete, setFrete] = useState(0);
-  const [parcelas, setParcelas] = useState(1);
+  const [parcelas, setParcelas] = useState(0);
   const [formaPagamento, setFormaPagamento] = useState('Pix');
   const [saving, setSaving] = useState(false);
+
+  const geraParcelas = Number(parcelas) > 0 && ['Cartão', 'Boleto'].includes(formaPagamento);
 
   const totals = useMemo(() => {
     const subtotal = cart.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
@@ -33,13 +35,13 @@ export default function Calculadora() {
   }, [cart, desconto, frete]);
 
   const datasParcelas = useMemo(() => {
-    if (totals.total <= 0) return null;
+    if (totals.total <= 0 || !geraParcelas) return null;
     const base = new Date();
     const first = new Date(base); first.setMonth(first.getMonth() + 1);
     const last = new Date(base); last.setMonth(last.getMonth() + Number(parcelas));
     const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     return `${fmt(first)} até ${fmt(last)}`;
-  }, [totals.total, parcelas]);
+  }, [totals.total, parcelas, geraParcelas]);
 
   async function handleGerarPedido() {
     const cliente = clientes.find((c) => c.id === clienteId);
@@ -119,15 +121,28 @@ export default function Calculadora() {
           </Field>
           <Field label="Parcelas">
             <select className={inputClass} value={parcelas} onChange={(e) => setParcelas(e.target.value)}>
+              <option value={0}>0x — à vista</option>
               {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}x</option>)}
             </select>
           </Field>
-
-          <div className="bg-primary-light rounded-xl p-3.5 mt-2">
-            <div className="text-[11.5px] font-bold text-primary-dark">Valor de cada parcela</div>
-            <div className="text-lg font-extrabold text-primary-dark mt-0.5">{money(totals.total / Number(parcelas) || 0)}</div>
-            <div className="text-[11.5px] font-bold text-primary-dark mt-2">Vencimentos: {datasParcelas || '—'}</div>
+          <div className="text-[11.5px] text-muted -mt-1.5">
+            {geraParcelas
+              ? 'Vai gerar parcelas no Calendário financeiro.'
+              : 'Não gera parcela no calendário (recebido à vista) — só Cartão ou Boleto parcelado geram.'}
           </div>
+
+          {geraParcelas ? (
+            <div className="bg-primary-light rounded-xl p-3.5 mt-2">
+              <div className="text-[11.5px] font-bold text-primary-dark">Valor de cada parcela</div>
+              <div className="text-lg font-extrabold text-primary-dark mt-0.5">{money(totals.total / Number(parcelas) || 0)}</div>
+              <div className="text-[11.5px] font-bold text-primary-dark mt-2">Vencimentos: {datasParcelas || '—'}</div>
+            </div>
+          ) : (
+            <div className="bg-success-bg rounded-xl p-3.5 mt-2">
+              <div className="text-[11.5px] font-bold text-success">Pagamento à vista</div>
+              <div className="text-lg font-extrabold text-success mt-0.5">{money(totals.total)}</div>
+            </div>
+          )}
 
           <Button className="w-full justify-center mt-4" onClick={handleGerarPedido} disabled={saving}>
             <Icon.cart className="w-[15px] h-[15px]" /> {saving ? 'Gerando...' : 'Gerar pedido de venda'}

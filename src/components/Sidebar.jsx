@@ -25,6 +25,10 @@ const groups = [
   { label: 'Compras', items: [
     { to: '/compras', label: 'Compras', icon: Icon.bag },
   ]},
+  { label: 'Notas Fiscais', items: [
+    { to: '/notas-entrada', label: 'NFs de Entrada', icon: Icon.arrowDown },
+    { to: '/notas-saida', label: 'NFs de Saída', icon: Icon.arrowUp },
+  ]},
   { label: 'Sistema', items: [
     { to: '/relatorios', label: 'Relatórios', icon: Icon.chart },
     { to: '/configuracoes', label: 'Configurações', icon: Icon.settings },

@@ -14,6 +14,8 @@ import Produtos from './pages/Produtos';
 import Categorias from './pages/Categorias';
 import Estoque from './pages/Estoque';
 import Compras from './pages/Compras';
+import NotasEntrada from './pages/NotasEntrada';
+import NotasSaida from './pages/NotasSaida';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 
@@ -80,6 +82,8 @@ export default function App() {
             <Route path="categorias" element={<Categorias />} />
             <Route path="estoque" element={<Estoque />} />
             <Route path="compras" element={<Compras />} />
+            <Route path="notas-entrada" element={<NotasEntrada />} />
+            <Route path="notas-saida" element={<NotasSaida />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>

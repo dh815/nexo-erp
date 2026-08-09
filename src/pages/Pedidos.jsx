@@ -7,7 +7,6 @@ import { Modal, Field, inputClass, Button, Pill } from '../components/ui';
 import { ProductPicker } from '../components/ProductPicker';
 import { money } from '../lib/format';
 import { createPedido, deletePedido } from '../lib/pedidos';
-import { parseNFeXML } from '../lib/nfe';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 const statusOptions = ['pago', 'parcial', 'pendente', 'atrasado'];
@@ -22,65 +21,15 @@ const emptyForm = {
 export default function Pedidos() {
   const { empresaId } = useAuth();
   const { data: pedidos, loading, update, remove: removeDoc } = useCollection('pedidos');
-  const { data: clientes, add: addCliente } = useCollection('clientes', { orderByField: 'nome', direction: 'asc' });
+  const { data: clientes } = useCollection('clientes', { orderByField: 'nome', direction: 'asc' });
   const { data: produtos } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
 
   const [modal, setModal] = useState(null); // 'new' | pedido (view/edit) | null
   const [form, setForm] = useState(emptyForm);
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
 
   function openNew() { setForm(emptyForm); setCart([]); setModal('new'); }
-
-  async function handleImportXML(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    try {
-      const xmlText = await file.text();
-      const nfe = parseNFeXML(xmlText);
-
-      let cliente = null;
-      if (nfe.destinatarioNome) {
-        cliente = clientes.find((c) => c.nome.toLowerCase() === nfe.destinatarioNome.toLowerCase())
-          || clientes.find((c) => c.documento && nfe.destinatarioDocumento && c.documento.replace(/\D/g, '') === nfe.destinatarioDocumento.replace(/\D/g, ''));
-        if (!cliente) {
-          const ref = await addCliente({
-            nome: nfe.destinatarioNome,
-            whatsapp: '', email: '', documento: nfe.destinatarioDocumento || '',
-            endereco: '', cidade: '', estado: '', cep: '', observacoes: 'Criado automaticamente ao importar XML de nota.',
-            totalComprado: 0, valorEmAberto: 0,
-          });
-          cliente = { id: ref.id, nome: nfe.destinatarioNome };
-        }
-      }
-
-      const novoCart = [];
-      const naoEncontrados = [];
-      for (const item of nfe.itens) {
-        const produto = produtos.find((p) => p.sku && item.codigo && p.sku.toLowerCase() === item.codigo.toLowerCase())
-          || produtos.find((p) => p.nome.toLowerCase() === item.nome.toLowerCase());
-        if (produto) {
-          novoCart.push({ produtoId: produto.id, nome: produto.nome, quantidade: item.quantidade, precoUnitario: item.valorUnitario });
-        } else {
-          naoEncontrados.push(item.nome);
-        }
-      }
-
-      setForm((f) => ({ ...f, clienteId: cliente?.id || f.clienteId, clienteNome: cliente?.nome || f.clienteNome, data: nfe.dataEmissao || f.data }));
-      setCart(novoCart);
-
-      if (naoEncontrados.length > 0) {
-        alert(`Nota importada, mas ${naoEncontrados.length} produto(s) não foram encontrados no catálogo e não entraram no pedido: ${naoEncontrados.join(', ')}. Cadastre-os em Produtos e adicione manualmente.`);
-      }
-    } catch (err) {
-      alert('Não foi possível importar essa nota: ' + err.message);
-    } finally {
-      setImporting(false);
-      e.target.value = '';
-    }
-  }
   function openView(p) { setModal(p); }
   function set(field, value) { setForm((f) => ({ ...f, [field]: value })); }
 
@@ -144,17 +93,6 @@ export default function Pedidos() {
         <Modal title="Novo pedido de venda" onClose={() => setModal(null)}
           footer={<><Button variant="ghost" onClick={() => setModal(null)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={saving}>{saving ? 'Salvando...' : 'Criar pedido'}</Button></>}>
-          <div className="flex items-center justify-between bg-primary-light rounded-xl p-3.5 mb-4">
-            <div>
-              <div className="text-[13px] font-bold text-primary-dark">Importar XML da nota de saída</div>
-              <div className="text-[11.5px] text-primary-dark opacity-80">Preenche cliente, produtos e valores automaticamente</div>
-            </div>
-            <label className="text-xs font-bold bg-white text-primary-dark rounded-lg px-3 py-2 cursor-pointer border border-line hover:bg-bg-soft shrink-0">
-              {importing ? 'Lendo...' : 'Escolher XML'}
-              <input type="file" accept=".xml" className="hidden" onChange={handleImportXML} disabled={importing} />
-            </label>
-          </div>
-
           <Field label="Cliente">
             <select className={inputClass} value={form.clienteId}
               onChange={(e) => {

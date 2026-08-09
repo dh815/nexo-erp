@@ -7,6 +7,7 @@ import { Card, Modal, Field, inputClass, Button } from '../components/ui';
 import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createCompra, deleteCompra } from '../lib/compras';
+import { parseNFeXML } from '../lib/nfe';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 
@@ -15,13 +16,14 @@ const emptyForm = { fornecedor: '', data: new Date().toISOString().slice(0, 10),
 export default function Compras() {
   const { empresaId } = useAuth();
   const { data: compras, loading } = useCollection('compras');
-  const { data: produtos } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
+  const { data: produtos, add: addProduto } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
 
   const [modal, setModal] = useState(null); // 'new' | null
   const [form, setForm] = useState(emptyForm);
   const [cart, setCart] = useState([]); // [{produtoId, nome, quantidade, custoUnitario}]
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   // Sugestão de reposição (MRP simplificado): produtos abaixo do estoque mínimo,
   // sugerindo repor até o dobro do mínimo.
@@ -34,6 +36,57 @@ export default function Compras() {
   function set(field, value) { setForm((f) => ({ ...f, [field]: value })); }
 
   function openNew() { setForm(emptyForm); setCart([]); setModal('new'); }
+
+  async function handleImportXML(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const xmlText = await file.text();
+      const nfe = parseNFeXML(xmlText);
+
+      const novoCart = [];
+      let vinculados = 0;
+      let criados = 0;
+
+      for (const item of nfe.itens) {
+        let produto = produtos.find((p) => p.sku && item.codigo && p.sku.toLowerCase() === item.codigo.toLowerCase())
+          || produtos.find((p) => p.nome.toLowerCase() === item.nome.toLowerCase());
+
+        if (!produto) {
+          const ref = await addProduto({
+            nome: item.nome,
+            sku: item.codigo || '',
+            categoria: '',
+            fornecedor: nfe.emitenteNome,
+            precoCusto: item.valorUnitario,
+            precoVenda: item.valorUnitario,
+            estoque: 0,
+            estoqueMinimo: 0,
+            codigoBarras: '',
+            peso: '',
+            dimensoes: '',
+            fotoUrl: '',
+          });
+          produto = { id: ref.id, nome: item.nome };
+          criados++;
+        } else {
+          vinculados++;
+        }
+
+        novoCart.push({ produtoId: produto.id, nome: produto.nome, quantidade: item.quantidade, custoUnitario: item.valorUnitario });
+      }
+
+      setForm((f) => ({ ...f, fornecedor: nfe.emitenteNome || f.fornecedor, data: nfe.dataEmissao || f.data }));
+      setCart(novoCart);
+      alert(`Nota importada: ${vinculados} produto(s) já cadastrado(s) vinculado(s) automaticamente, ${criados} produto(s) novo(s) criado(s) no catálogo.`);
+    } catch (err) {
+      alert('Não foi possível importar essa nota: ' + err.message);
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  }
 
   function addToCart(produto, qty = 1) {
     setCart((c) => {
@@ -124,6 +177,17 @@ export default function Compras() {
         <Modal title="Nova compra" onClose={() => setModal(null)}
           footer={<><Button variant="ghost" onClick={() => setModal(null)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : 'Registrar compra'}</Button></>}>
+          <div className="flex items-center justify-between bg-primary-light rounded-xl p-3.5 mb-4">
+            <div>
+              <div className="text-[13px] font-bold text-primary-dark">Importar XML da nota de entrada</div>
+              <div className="text-[11.5px] text-primary-dark opacity-80">Preenche fornecedor, produtos e valores automaticamente</div>
+            </div>
+            <label className="text-xs font-bold bg-white text-primary-dark rounded-lg px-3 py-2 cursor-pointer border border-line hover:bg-bg-soft shrink-0">
+              {importing ? 'Lendo...' : 'Escolher XML'}
+              <input type="file" accept=".xml" className="hidden" onChange={handleImportXML} disabled={importing} />
+            </label>
+          </div>
+
           <Field label="Fornecedor"><input className={inputClass} value={form.fornecedor} onChange={(e) => set('fornecedor', e.target.value)} autoFocus /></Field>
 
           <Field label="Produtos">

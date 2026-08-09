@@ -1,5 +1,6 @@
 import { Icon } from './Icons';
 import { useAuth } from '../context/AuthContext';
+import { GlobalSearch } from './GlobalSearch';
 
 function initials(name = '') {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -14,10 +15,7 @@ export function Topbar({ onMenuClick }) {
       <button onClick={onMenuClick} className="md:hidden w-[34px] h-[34px] flex items-center justify-center rounded-lg hover:bg-bg-soft">
         <Icon.menu className="w-[18px] h-[18px]" />
       </button>
-      <div className="flex-1 max-w-[420px] hidden sm:flex items-center gap-2 bg-bg-soft border border-line rounded-[10px] px-3 py-2 text-faint">
-        <Icon.search className="w-4 h-4 shrink-0" />
-        <input placeholder="Pesquisar produtos, clientes, pedidos, SKU..." className="bg-transparent outline-none text-[13.5px] text-ink w-full" />
-      </div>
+      <GlobalSearch />
       <div className="ml-auto flex items-center gap-3">
         <button className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-muted hover:bg-bg-soft relative">
           <Icon.bell className="w-[19px] h-[19px]" />

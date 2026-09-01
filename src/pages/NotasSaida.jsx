@@ -6,6 +6,7 @@ import { Card, Loading, Button, Pill } from '../components/ui';
 import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createNotaSaida, updateNotaSaidaStatus, deleteNotaSaida } from '../lib/notas';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const statusColor = { rascunho: 'gray', transmitida: 'green', cancelada: 'red' };
 const statusLabel = { rascunho: 'Rascunho', transmitida: 'Transmitida', cancelada: 'Cancelada' };
@@ -14,6 +15,7 @@ export default function NotasSaida() {
   const { empresaId } = useAuth();
   const { data: notas, loading: l1 } = useCollection('notasSaida');
   const { data: pedidos, loading: l2 } = useCollection('pedidos');
+  const { notify, confirm } = useUIFeedback();
   const loading = l1 || l2;
 
   const pedidosPendentes = useMemo(() => {
@@ -25,7 +27,7 @@ export default function NotasSaida() {
     try {
       await createNotaSaida(empresaId, pedido);
     } catch (err) {
-      alert(err.message);
+      notify(err.message, { type: 'error' });
     }
   }
 
@@ -33,11 +35,11 @@ export default function NotasSaida() {
     await updateNotaSaidaStatus(empresaId, nota.id, 'transmitida');
   }
   async function cancelar(nota) {
-    if (!confirm('Cancelar essa nota de saída?')) return;
+    if (!(await confirm({ message: 'Cancelar essa nota de saída?', confirmLabel: 'Cancelar nota', danger: true }))) return;
     await updateNotaSaidaStatus(empresaId, nota.id, 'cancelada');
   }
   async function excluir(nota) {
-    if (!confirm('Excluir essa nota de saída? Essa ação não pode ser desfeita.')) return;
+    if (!(await confirm({ message: 'Excluir essa nota de saída? Essa ação não pode ser desfeita.', confirmLabel: 'Excluir', danger: true }))) return;
     await deleteNotaSaida(empresaId, nota.id);
   }
 

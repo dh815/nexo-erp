@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useCollection } from '../hooks/useCollection';
-import { StatCard, Card, Loading } from '../components/ui';
+import { StatCard, Card, StatCardSkeleton, Skeleton } from '../components/ui';
 import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 
@@ -31,9 +31,7 @@ export default function Dashboard() {
     return { totalEntradas, totalSaidas, estoqueBaixo, totalEstoque, aReceber, vencidoTotal, proximos, vencidasCount: vencidas.length };
   }, [entradas, saidas, produtos, parcelas]);
 
-  if (loading) return <Loading />;
-
-  const semDados = entradas.length === 0 && produtos.length === 0 && clientes.length === 0 && pedidos.length === 0;
+  const semDados = !loading && entradas.length === 0 && produtos.length === 0 && clientes.length === 0 && pedidos.length === 0;
 
   return (
     <div>
@@ -42,22 +40,47 @@ export default function Dashboard() {
         <div className="text-[13px] text-muted mt-1">Resumo em tempo real dos dados da sua empresa</div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <StatCard icon={Icon.wallet} color="blue" num={money(stats.totalEntradas)} label="Total vendido / recebido" />
-        <StatCard icon={Icon.calendar} color="orange" num={money(stats.aReceber)} label="Valor a receber" />
-        <StatCard icon={Icon.bell} color="red" num={`${stats.vencidasCount} · ${money(stats.vencidoTotal)}`} label="Contas vencidas" />
-        <StatCard icon={Icon.arrowUp} color="red" num={money(stats.totalSaidas)} label="Total de saídas" />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        <StatCard icon={Icon.box} color="blue" num={stats.totalEstoque} label="Produtos em estoque" />
-        <StatCard icon={Icon.layers} color="red" num={`${stats.estoqueBaixo} itens`} label="Estoque baixo" />
-        <StatCard icon={Icon.users} color="green" num={clientes.length} label="Clientes cadastrados" />
-        <StatCard icon={Icon.cart} color="blue" num={pedidos.length} label="Pedidos realizados" />
-      </div>
+      {loading ? (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            {Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <StatCard icon={Icon.wallet} color="blue" num={money(stats.totalEntradas)} label="Total vendido / recebido" />
+            <StatCard icon={Icon.calendar} color="orange" num={money(stats.aReceber)} label="Valor a receber" />
+            <StatCard icon={Icon.bell} color="red" num={`${stats.vencidasCount} · ${money(stats.vencidoTotal)}`} label="Contas vencidas" />
+            <StatCard icon={Icon.arrowUp} color="red" num={money(stats.totalSaidas)} label="Total de saídas" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            <StatCard icon={Icon.box} color="blue" num={stats.totalEstoque} label="Produtos em estoque" />
+            <StatCard icon={Icon.layers} color="red" num={`${stats.estoqueBaixo} itens`} label="Estoque baixo" />
+            <StatCard icon={Icon.users} color="green" num={clientes.length} label="Clientes cadastrados" />
+            <StatCard icon={Icon.cart} color="blue" num={pedidos.length} label="Pedidos realizados" />
+          </div>
+        </>
+      )}
 
       <Card className="p-5">
         <div className="font-bold text-[14.5px] mb-3">Próximos recebimentos</div>
-        {stats.proximos.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col gap-2.5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-1">
+                <div>
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="h-2.5 w-24 mt-1.5" />
+                </div>
+                <Skeleton className="h-3.5 w-16" />
+              </div>
+            ))}
+          </div>
+        ) : stats.proximos.length === 0 ? (
           <div className="text-[12.5px] text-faint py-4 text-center">Nenhuma parcela a vencer no momento.</div>
         ) : (
           <div className="flex flex-col gap-1">

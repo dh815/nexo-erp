@@ -7,6 +7,7 @@ import { Modal, Field, inputClass, Button, Pill } from '../components/ui';
 import { ProductPicker } from '../components/ProductPicker';
 import { money } from '../lib/format';
 import { createPedido, deletePedido } from '../lib/pedidos';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 const statusOptions = ['pago', 'parcial', 'pendente', 'atrasado'];
@@ -23,6 +24,7 @@ export default function Pedidos() {
   const { data: pedidos, loading, update, remove: removeDoc } = useCollection('pedidos');
   const { data: clientes } = useCollection('clientes', { orderByField: 'nome', direction: 'asc' });
   const { data: produtos } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
+  const { notify, confirm } = useUIFeedback();
 
   const [modal, setModal] = useState(null); // 'new' | pedido (view/edit) | null
   const [form, setForm] = useState(emptyForm);
@@ -44,7 +46,7 @@ export default function Pedidos() {
 
   async function handleCreate() {
     if (!form.clienteNome || cart.length === 0) {
-      alert('Selecione um cliente e ao menos um produto.');
+      notify('Selecione um cliente e ao menos um produto.', { type: 'error' });
       return;
     }
     setSaving(true);
@@ -56,14 +58,14 @@ export default function Pedidos() {
       });
       setModal(null);
     } catch (err) {
-      alert('Não foi possível criar o pedido: ' + err.message);
+      notify('Não foi possível criar o pedido: ' + err.message, { type: 'error' });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(pedido) {
-    if (!confirm(`Excluir o pedido de ${pedido.clienteNome}? O estoque dos produtos será devolvido.`)) return;
+    if (!(await confirm({ message: `Excluir o pedido de ${pedido.clienteNome}? O estoque dos produtos será devolvido.`, confirmLabel: 'Excluir', danger: true }))) return;
     await deletePedido(empresaId, pedido);
   }
 

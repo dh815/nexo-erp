@@ -9,6 +9,7 @@ import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createPedido } from '../lib/pedidos';
 import { calcularVencimentos } from '../lib/vencimentos';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 
@@ -17,6 +18,7 @@ export default function Calculadora() {
   const navigate = useNavigate();
   const { data: produtos } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
   const { data: clientes } = useCollection('clientes', { orderByField: 'nome', direction: 'asc' });
+  const { notify } = useUIFeedback();
 
   const [cart, setCart] = useState([]);
   const [clienteId, setClienteId] = useState('');
@@ -49,8 +51,8 @@ export default function Calculadora() {
 
   async function handleGerarPedido() {
     const cliente = clientes.find((c) => c.id === clienteId);
-    if (!cliente) { alert('Selecione um cliente.'); return; }
-    if (cart.length === 0) { alert('Adicione ao menos um produto.'); return; }
+    if (!cliente) { notify('Selecione um cliente.', { type: 'error' }); return; }
+    if (cart.length === 0) { notify('Adicione ao menos um produto.', { type: 'error' }); return; }
     setSaving(true);
     try {
       await createPedido(empresaId, {
@@ -69,7 +71,7 @@ export default function Calculadora() {
       });
       navigate('/pedidos');
     } catch (err) {
-      alert('Não foi possível gerar o pedido: ' + err.message);
+      notify('Não foi possível gerar o pedido: ' + err.message, { type: 'error' });
     } finally {
       setSaving(false);
     }

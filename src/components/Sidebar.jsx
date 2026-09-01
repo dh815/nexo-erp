@@ -155,7 +155,7 @@ export function Sidebar({ open, onNavigate }) {
       {/* Rodapé com a empresa logada, com base em dados reais (empresas/{id}.nome).
           Antes mostrava um card fixo de "Plano Profissional — 620/1.000 pedidos",
           com número inventado sem nenhuma consulta ao banco. Removido até existir
-          cobrança/planos de verdade (Fase 9 do roadmap). *}
+          cobrança/planos de verdade (Fase 9 do roadmap). */}
       <div className="px-5 py-5 border-t border-line">
         <div className="bg-bg-soft rounded-xl p-3 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary-light text-primary-dark flex items-center justify-center font-extrabold text-[13px] shrink-0 font-display">

@@ -8,6 +8,7 @@ import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createCompra, deleteCompra } from '../lib/compras';
 import { parseNFeXML } from '../lib/nfe';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const formasPagamento = ['Pix', 'Cartão', 'Boleto', 'Dinheiro', 'Transferência'];
 
@@ -17,6 +18,7 @@ export default function Compras() {
   const { empresaId } = useAuth();
   const { data: compras, loading } = useCollection('compras');
   const { data: produtos, add: addProduto } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
+  const { notify, confirm } = useUIFeedback();
 
   const [modal, setModal] = useState(null); // 'new' | null
   const [form, setForm] = useState(emptyForm);
@@ -79,9 +81,9 @@ export default function Compras() {
 
       setForm((f) => ({ ...f, fornecedor: nfe.emitenteNome || f.fornecedor, data: nfe.dataEmissao || f.data }));
       setCart(novoCart);
-      alert(`Nota importada: ${vinculados} produto(s) já cadastrado(s) vinculado(s) automaticamente, ${criados} produto(s) novo(s) criado(s) no catálogo.`);
+      notify(`Nota importada: ${vinculados} produto(s) já cadastrado(s) vinculado(s) automaticamente, ${criados} produto(s) novo(s) criado(s) no catálogo.`, { type: 'success' });
     } catch (err) {
-      alert('Não foi possível importar essa nota: ' + err.message);
+      notify('Não foi possível importar essa nota: ' + err.message, { type: 'error' });
     } finally {
       setImporting(false);
       e.target.value = '';
@@ -114,7 +116,7 @@ export default function Compras() {
 
   async function handleSave() {
     if (!form.fornecedor.trim() || cart.length === 0) {
-      alert('Informe o fornecedor e adicione ao menos um produto.');
+      notify('Informe o fornecedor e adicione ao menos um produto.', { type: 'error' });
       return;
     }
     setSaving(true);
@@ -122,14 +124,14 @@ export default function Compras() {
       await createCompra(empresaId, { ...form, itens: cart, valorTotal: total });
       setModal(null);
     } catch (err) {
-      alert('Não foi possível registrar a compra: ' + err.message);
+      notify('Não foi possível registrar a compra: ' + err.message, { type: 'error' });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(compra) {
-    if (!confirm(`Excluir a compra de ${compra.fornecedor}? O estoque adicionado será removido.`)) return;
+    if (!(await confirm({ message: `Excluir a compra de ${compra.fornecedor}? O estoque adicionado será removido.`, confirmLabel: 'Excluir', danger: true }))) return;
     await deleteCompra(empresaId, compra);
   }
 

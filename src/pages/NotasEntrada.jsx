@@ -8,6 +8,7 @@ import { Icon } from '../components/Icons';
 import { money } from '../lib/format';
 import { createDevolucao, deleteDevolucao } from '../lib/notas';
 import { deleteCompra } from '../lib/compras';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const emptyForm = { clienteId: '', clienteNome: '', pedidoId: '', motivo: '', data: new Date().toISOString().slice(0, 10) };
 
@@ -18,6 +19,7 @@ export default function NotasEntrada() {
   const { data: clientes } = useCollection('clientes', { orderByField: 'nome', direction: 'asc' });
   const { data: pedidos } = useCollection('pedidos');
   const { data: produtos } = useCollection('produtos', { orderByField: 'nome', direction: 'asc' });
+  const { notify, confirm } = useUIFeedback();
   const loading = l1 || l2;
 
   const [modal, setModal] = useState(null); // 'new' | null
@@ -57,7 +59,7 @@ export default function NotasEntrada() {
 
   async function handleSave() {
     if (!form.clienteId || cart.length === 0) {
-      alert('Selecione o cliente e ao menos um produto sendo devolvido.');
+      notify('Selecione o cliente e ao menos um produto sendo devolvido.', { type: 'error' });
       return;
     }
     setSaving(true);
@@ -65,7 +67,7 @@ export default function NotasEntrada() {
       await createDevolucao(empresaId, { ...form, itens: cart, valorTotal: total });
       setModal(null);
     } catch (err) {
-      alert('Não foi possível registrar a devolução: ' + err.message);
+      notify('Não foi possível registrar a devolução: ' + err.message, { type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -73,10 +75,10 @@ export default function NotasEntrada() {
 
   async function handleDelete(row) {
     if (row.tipo === 'compra') {
-      if (!confirm(`Excluir a compra de ${row.fornecedor}? O estoque adicionado será removido.`)) return;
+      if (!(await confirm({ message: `Excluir a compra de ${row.fornecedor}? O estoque adicionado será removido.`, confirmLabel: 'Excluir', danger: true }))) return;
       await deleteCompra(empresaId, row);
     } else {
-      if (!confirm(`Excluir a devolução de ${row.clienteNome}? O estoque devolvido será removido.`)) return;
+      if (!(await confirm({ message: `Excluir a devolução de ${row.clienteNome}? O estoque devolvido será removido.`, confirmLabel: 'Excluir', danger: true }))) return;
       await deleteDevolucao(empresaId, row);
     }
   }

@@ -12,7 +12,7 @@ export function Button({ variant = 'primary', size = 'md', className = '', child
   const base = 'inline-flex items-center gap-2 font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2.5 text-sm' };
   const variants = {
-    primary: 'bg-primary text-white shadow-[0_6px_16px_rgba(46,94,255,0.28)] hover:bg-primary-dark',
+    primary: 'bg-primary text-white shadow-[0_6px_16px_rgba(108,92,231,0.3)] hover:bg-primary-dark',
     ghost: 'bg-white text-ink border border-line hover:bg-bg-soft',
     danger: 'bg-danger-bg text-danger hover:bg-red-100',
   };
@@ -97,4 +97,40 @@ export function EmptyState({ message }) {
 
 export function Loading() {
   return <div className="text-center py-10 text-[12.5px] text-faint">Carregando...</div>;
+}
+
+// Skeleton loading: usado no lugar de "Carregando..." em telas com layout
+// já conhecido (tabelas, cards de estatística), para dar sensação de app
+// rápido em vez de um texto solto piscando na tela.
+export function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse bg-bg-soft-2 rounded-md ${className}`} />;
+}
+
+export function TableSkeleton({ columns = 4, rows = 5 }) {
+  return (
+    <div className="w-full">
+      <div className="flex gap-3.5 px-3.5 pb-2.5 border-b border-line">
+        {Array.from({ length: columns }).map((_, i) => (
+          <Skeleton key={i} className="h-2.5 flex-1 max-w-[120px]" />
+        ))}
+      </div>
+      {Array.from({ length: rows }).map((_, r) => (
+        <div key={r} className="flex items-center gap-3.5 px-3.5 py-3 border-b border-[#f0f2f8]">
+          {Array.from({ length: columns }).map((_, c) => (
+            <Skeleton key={c} className={`h-3.5 flex-1 ${c === 0 ? 'max-w-[160px]' : 'max-w-[90px]'}`} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function StatCardSkeleton() {
+  return (
+    <Card className="p-5">
+      <Skeleton className="w-9 h-9 rounded-xl" />
+      <Skeleton className="h-5 w-20 mt-4" />
+      <Skeleton className="h-3 w-28 mt-2" />
+    </Card>
+  );
 }

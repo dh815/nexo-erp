@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Card, Field, inputClass, Button } from '../components/ui';
 import { Icon } from '../components/Icons';
 import { uploadImage } from '../lib/cloudinary';
+import { useUIFeedback } from '../context/UIFeedbackContext';
 
 const themeColors = [
   { name: 'Azul', value: '#2e5eff' },
@@ -17,6 +18,7 @@ const sections = ['Empresa', 'Aparência', 'Usuários e permissões', 'Assinatur
 
 export default function Configuracoes() {
   const { empresa, updateEmpresa, user } = useAuth();
+  const { notify } = useUIFeedback();
   const [section, setSection] = useState('Empresa');
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -43,7 +45,7 @@ export default function Configuracoes() {
       const { url } = await uploadImage(file, 'empresa');
       setLogoUrl(url);
     } catch (err) {
-      alert('Não foi possível enviar a logo. Verifique a configuração do Cloudinary.');
+      notify('Não foi possível enviar a logo. Verifique a configuração do Cloudinary.', { type: 'error' });
     } finally {
       setUploading(false);
     }
@@ -56,7 +58,7 @@ export default function Configuracoes() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      alert('Não foi possível salvar: ' + err.message);
+      notify('Não foi possível salvar: ' + err.message, { type: 'error' });
     } finally {
       setSaving(false);
     }

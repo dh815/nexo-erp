@@ -1,8 +1,8 @@
 import { Icon } from './Icons';
-import { EmptyState, Loading } from './ui';
+import { EmptyState, TableSkeleton } from './ui';
 
 export function DataTable({ columns, rows, loading, onEdit, onDelete, emptyMessage = 'Nenhum registro encontrado.' }) {
-  if (loading) return <Loading />;
+  if (loading) return <TableSkeleton columns={columns.length} />;
   if (!rows.length) return <EmptyState message={emptyMessage} />;
 
   return (
@@ -38,7 +38,7 @@ export function DataTable({ columns, rows, loading, onEdit, onDelete, emptyMessa
                       <button onClick={() => onDelete(row)} className="w-7 h-7 rounded-lg flex items-center justify-center text-faint hover:bg-bg-soft-2 hover:text-danger">
                         <Icon.trash className="w-[14px] h-[14px]" />
                       </button>
-                    )}
+                   )}
                   </span>
                 </td>
               )}

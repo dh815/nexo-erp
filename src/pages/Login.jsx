@@ -26,7 +26,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-bg-soft px-4">
       <div className="w-full max-w-sm bg-white border border-line rounded-2xl shadow-card-lg p-7">
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[#6f8dff] to-primary flex items-center justify-center text-white font-extrabold font-display">N</div>
+          <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[#9c8ff2] to-primary flex items-center justify-center text-white font-extrabold font-display">N</div>
           <div className="font-extrabold text-lg font-display">Nexo ERP</div>
         </div>
         <h1 className="text-lg font-bold mb-1">Entrar na sua conta</h1>

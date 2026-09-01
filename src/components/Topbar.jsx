@@ -22,7 +22,7 @@ export function Topbar({ onMenuClick }) {
           <span className="absolute top-[7px] right-2 w-[7px] h-[7px] bg-danger rounded-full border-2 border-white" />
         </button>
         <button onClick={logout} title="Sair" className="flex items-center gap-2 pl-[5px] pr-2.5 py-[5px] rounded-full border border-line hover:bg-bg-soft">
-          <div className="w-[29px] h-[29px] rounded-full bg-gradient-to-br from-[#6f8dff] to-primary flex items-center justify-center text-white text-xs font-bold">
+          <div className="w-[29px] h-[29px] rounded-full bg-gradient-to-br from-[#9c8ff2] to-primary flex items-center justify-center text-white text-xs font-bold">
             {initials(displayName)}
           </div>
           <div className="hidden sm:block text-left">

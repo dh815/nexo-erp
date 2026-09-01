@@ -25,6 +25,11 @@ export async function criarAgendamento(empresaId, dados, { agendamentosDoDia = [
     ...dados,
     horaFim,
     status: 'agendado',
+    // Flags lidas pelo nexo-erp-server (job de WhatsApp) pra saber o que já
+    // foi enviado. Sem WhatsApp do cliente, já nascem "concluídas" (não há
+    // o que mandar), senão o poller nunca ia parar de tentar.
+    confirmacaoEnviada: !dados.clienteWhatsapp,
+    lembreteEnviado: !dados.clienteWhatsapp,
     criadoEm: serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });
@@ -36,7 +41,11 @@ export async function reagendar(empresaId, agendamento, { data, horaInicio }, { 
     throw new Error('Esse profissional já tem um compromisso nesse horário. Escolha outro horário.');
   }
   return updateDoc(doc(db, path(empresaId, 'agendamentos'), agendamento.id), {
-    data, horaInicio, horaFim, atualizadoEm: serverTimestamp(),
+    data, horaInicio, horaFim,
+    // Mudou o horário: se já tinha lembrete mandado pro horário antigo, reseta
+    // pra o job de WhatsApp mandar de novo pro horário novo.
+    lembreteEnviado: agendamento.clienteWhatsapp ? false : agendamento.lembreteEnviado,
+    atualizadoEm: serverTimestamp(),
   });
 }
 

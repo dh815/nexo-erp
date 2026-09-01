@@ -6,6 +6,11 @@ const groups = [
   { label: 'Visão geral', items: [
     { to: '/', label: 'Dashboard', icon: Icon.grid, end: true },
   ]},
+  { label: 'Agenda', items: [
+    { to: '/agenda', label: 'Agenda', icon: Icon.calendarPlus, feature: 'agenda' },
+    { to: '/servicos', label: 'Serviços', icon: Icon.scissors, feature: 'agenda' },
+    { to: '/profissionais', label: 'Profissionais', icon: Icon.userCheck, feature: 'agenda' },
+  ]},
   { label: 'Financeiro', items: [
     { to: '/entradas', label: 'Entradas', icon: Icon.arrowDown },
     { to: '/saidas', label: 'Saídas', icon: Icon.arrowUp },
